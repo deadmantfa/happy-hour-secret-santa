@@ -52,9 +52,9 @@ import { CommonModule } from '@angular/common';
                 <select 
                   [(ngModel)]="gender" 
                   class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body">
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
+                  <option value="Male">Gentleman Elf 🎅</option>
+                  <option value="Female">Lady Elf 🤶</option>
+                  <option value="Other">Mysterious Elf 🧝</option>
                 </select>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { SantaService, Participant } from '../services/santa.service';
 import { GoogleGenAI } from '@google/genai';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-reveal',
   standalone: true,
   imports: [FormsModule, CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="w-full flex flex-col items-center justify-center p-4 min-h-[80vh]">
       
@@ -87,12 +88,12 @@ import { CommonModule } from '@angular/common';
                   <div class="z-10 text-center space-y-8">
                     <div>
                       <p class="text-gold font-body uppercase tracking-[0.2em] text-sm mb-2">Secret Mission For</p>
-                      <h2 class="text-5xl md:text-7xl font-christmas text-white drop-shadow-lg leading-tight">{{ selectedUser()?.name }}</h2>
+                      <h2 class="text-4xl md:text-6xl font-christmas text-white drop-shadow-lg leading-tight">{{ selectedUser()?.name }}</h2>
                     </div>
 
                     <div class="relative inline-block group">
                       <div class="absolute inset-0 bg-gold/30 blur-2xl rounded-full animate-pulse"></div>
-                      <div class="text-9xl relative z-10 animate-float transform group-hover:scale-110 transition-transform duration-300">🎁</div>
+                      <div class="text-8xl md:text-9xl relative z-10 animate-float transform group-hover:scale-110 transition-transform duration-300">🎁</div>
                       <p class="mt-4 text-xl font-bold text-gold animate-bounce">Tap to Open!</p>
                     </div>
 
@@ -113,15 +114,15 @@ import { CommonModule } from '@angular/common';
                   <div class="absolute bottom-0 left-0 p-4 text-6xl opacity-20 -rotate-12 pointer-events-none">❄️</div>
 
                   <!-- Header -->
-                  <div class="bg-green-700 p-6 text-center shadow-md z-10 shrink-0">
-                    <h3 class="text-2xl font-christmas text-white tracking-wide">You are Secret Santa for...</h3>
+                  <div class="bg-green-700 p-4 md:p-6 text-center shadow-md z-20 shrink-0">
+                    <h3 class="text-xl md:text-2xl font-christmas text-white tracking-wide">You are Secret Santa for...</h3>
                   </div>
 
                   <!-- Main Content -->
-                  <div class="flex-grow flex flex-col justify-center items-center p-6 text-center overflow-y-auto custom-scroll relative z-10">
+                  <div class="flex-grow flex flex-col items-center p-6 text-center overflow-y-auto custom-scroll relative z-10 pt-8">
                     
                     @if (isLoadingAi()) {
-                      <div class="flex flex-col items-center animate-pulse">
+                      <div class="flex flex-col items-center animate-pulse mt-8">
                         <span class="text-7xl mb-4">🦌</span>
                         <p class="text-xl text-green-800 font-bold">Asking the Reindeer...</p>
                         <p class="text-xs text-gray-400 mt-2">Checking naughty/nice list...</p>
@@ -130,20 +131,20 @@ import { CommonModule } from '@angular/common';
                       <div class="space-y-6 w-full max-w-lg">
                         
                         <!-- Name & Avatar -->
-                        <div class="transform scale-110 mb-2 mt-4 flex flex-col items-center">
+                        <div class="transform hover:scale-105 transition-transform duration-300 mb-2 flex flex-col items-center">
                           <div class="text-6xl mb-2 animate-bounce">🧝</div>
-                          <h2 class="text-5xl md:text-7xl font-christmas text-red-700 drop-shadow-sm leading-tight">
+                          <h2 class="text-4xl md:text-6xl font-christmas text-red-700 drop-shadow-sm leading-tight break-words px-2">
                             {{ assignedTarget?.name }}
                           </h2>
                         </div>
 
                         <!-- Data Grid -->
-                        <div class="grid grid-cols-1 gap-3 text-left">
+                        <div class="grid grid-cols-1 gap-3 text-left w-full">
                           <div class="bg-orange-50 p-4 rounded-xl border border-orange-200 shadow-sm">
                             <div class="flex items-center gap-2 mb-1 text-orange-800 font-bold text-xs uppercase tracking-wider">
                               <span>🍽️</span> Food Preference
                             </div>
-                            <div class="text-xl text-gray-900 font-bold pl-7">
+                            <div class="text-lg text-gray-900 font-bold pl-7">
                               {{ assignedTarget?.foodPreference || 'No preference' }}
                             </div>
                           </div>
@@ -152,7 +153,7 @@ import { CommonModule } from '@angular/common';
                             <div class="flex items-center gap-2 mb-1 text-blue-800 font-bold text-xs uppercase tracking-wider">
                               <span>💡</span> Fun Fact / Hint
                             </div>
-                            <div class="text-lg text-gray-900 font-medium pl-7 leading-snug">
+                            <div class="text-base text-gray-900 font-medium pl-7 leading-snug">
                               {{ assignedTarget?.funFact || 'Loves surprises!' }}
                             </div>
                           </div>
@@ -174,7 +175,7 @@ import { CommonModule } from '@angular/common';
                         }
                       </div>
                     } @else {
-                      <div class="text-red-600 font-bold p-4 bg-red-100 rounded-xl">
+                      <div class="text-red-600 font-bold p-4 bg-red-100 rounded-xl mt-8">
                         <p class="text-xl mb-2">⚠️ Assignment Error</p>
                         <p class="text-sm">We couldn't find your match. Please contact the admin!</p>
                       </div>
@@ -182,7 +183,7 @@ import { CommonModule } from '@angular/common';
                   </div>
 
                   <!-- Footer Action -->
-                  <div class="p-4 bg-gray-50 border-t border-gray-200 z-10 shrink-0">
+                  <div class="p-4 bg-gray-50 border-t border-gray-200 z-20 shrink-0">
                     <button (click)="reset($event)" class="w-full py-4 bg-gray-800 hover:bg-black text-white rounded-xl font-bold text-lg transition-all transform active:scale-95 shadow-lg">
                       Close & Keep it Secret 🤫
                     </button>
@@ -214,8 +215,8 @@ import { CommonModule } from '@angular/common';
       width: 100%;
       max-width: 500px;
       height: 70vh;
-      min-height: 580px;
-      max-height: 85vh;
+      min-height: 500px;
+      max-height: 800px;
       transform-style: preserve-3d;
       transition: transform 1s cubic-bezier(0.4, 0.0, 0.2, 1);
       cursor: pointer;
