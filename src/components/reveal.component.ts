@@ -1,4 +1,3 @@
-
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +13,8 @@ import { GoogleGenAI } from '@google/genai';
       
       @if (!service.config().drawComplete) {
         <div class="frosty-glass p-12 rounded-3xl text-center shadow-xl relative max-w-md mx-auto animate-float">
-          <div class="absolute -top-8 -right-8 text-7xl animate-pulse">🧝</div>
+          <div class="absolute -top-8 -right-8 text-7xl animate-pulse" style="animation-duration: 1.5s;">🧝</div>
+          <div class="absolute -bottom-10 -left-10 text-6xl animate-bounce" style="animation-duration: 2.2s;">🦌</div>
           <div class="text-7xl mb-6">🔒</div>
           <h2 class="text-5xl font-christmas text-gold mb-6">Not Yet!</h2>
           <p class="text-xl text-white">The elves are still calculating... <br>Check back after the 20th!</p>
@@ -33,7 +33,7 @@ import { GoogleGenAI } from '@google/genai';
                   (click)="select(p)"
                   class="bg-white/10 hover:bg-white/25 text-white py-6 px-4 rounded-2xl transition-all border border-white/10 hover:border-gold hover:scale-105 hover:shadow-lg flex flex-col items-center gap-3 group relative overflow-hidden">
                   <div class="text-4xl group-hover:animate-bounce transition-transform">
-                    {{ getAvatar(p.gender) }}
+                    🧝
                   </div>
                   <span class="font-bold text-lg truncate w-full text-shadow-sm">{{ p.name }}</span>
                 </button>
@@ -129,7 +129,7 @@ import { GoogleGenAI } from '@google/genai';
                         
                         <!-- Name & Avatar -->
                         <div class="transform scale-110 mb-2 mt-4 flex flex-col items-center">
-                          <div class="text-6xl mb-2 animate-bounce">{{ getAvatar(assignedTarget?.gender) }}</div>
+                          <div class="text-6xl mb-2 animate-bounce">🧝</div>
                           <h2 class="text-5xl md:text-7xl font-christmas text-red-700 drop-shadow-sm leading-tight">
                             {{ assignedTarget?.name }}
                           </h2>
@@ -212,7 +212,8 @@ import { GoogleGenAI } from '@google/genai';
       width: 100%;
       max-width: 500px;
       height: 70vh;
-      min-height: 600px;
+      min-height: 580px;
+      max-height: 85vh;
       transform-style: preserve-3d;
       transition: transform 1s cubic-bezier(0.4, 0.0, 0.2, 1);
       cursor: pointer;
@@ -359,11 +360,5 @@ export class RevealComponent {
     this.isRevealed.set(false);
     this.pinAttempt.set('');
     this.assignedTarget = null;
-  }
-
-  getAvatar(gender: string | undefined): string {
-    if (gender === 'Female') return '🤶';
-    if (gender === 'Male') return '🎅';
-    return '🧝';
   }
 }

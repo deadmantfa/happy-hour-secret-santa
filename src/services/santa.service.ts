@@ -1,6 +1,7 @@
-
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { NotificationService } from './notification.service';
 
 // --- CONFIGURATION ---
 const SUPABASE_URL = 'https://awhftldondqmopnxbjie.supabase.co';
@@ -9,7 +10,6 @@ const SUPABASE_KEY = 'sb_publishable_WLeZyOD9vxomb8tYYAsIxw_iFMVCPSt';
 export interface Participant {
   id: string | number; 
   name: string;
-  gender: 'Male' | 'Female' | 'Other';
   // Sensitive fields (optional because they are not loaded in public view)
   pin?: string; 
   partner_id?: string | number | null;
@@ -26,14 +26,12 @@ export interface Participant {
   funFact?: string;
 }
 
+// Represents the raw data structure from the 'config' table in Supabase.
 export interface AppState {
   id?: number | string;
   deadline: string;
   budget: number;
   draw_complete: boolean;
-  gallery_images: string[];
-  drawComplete?: boolean;
-  galleryImages?: string[];
 }
 
 @Injectable({
@@ -41,6 +39,8 @@ export interface AppState {
 })
 export class SantaService {
   private supabase: SupabaseClient;
+  private platformId = inject(PLATFORM_ID);
+  private notificationService = inject(NotificationService);
 
   // State
   private _participants = signal<Participant[]>([]); // Public safe list
@@ -51,21 +51,24 @@ export class SantaService {
     deadline: '2023-12-20',
     budget: 500,
     draw_complete: false,
-    gallery_images: []
   });
   private _isAdmin = signal(false);
+  private _loadingState = signal<'loading' | 'loaded' | 'error'>('loading');
 
   // Projections
   readonly participants = computed(() => this._participants()); // Public access
   readonly adminParticipants = computed(() => this._adminParticipants()); // Admin access
 
-  readonly config = computed(() => ({
-    ...this._config(),
-    drawComplete: this._config().draw_complete,
-    galleryImages: this._config().gallery_images || []
-  }));
+  readonly config = computed(() => {
+    const raw = this._config();
+    return {
+      ...raw,
+      drawComplete: raw.draw_complete,
+    };
+  });
 
   readonly isAdmin = this._isAdmin.asReadonly();
+  readonly loadingState = this._loadingState.asReadonly();
 
   constructor() {
     this.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -73,23 +76,31 @@ export class SantaService {
   }
 
   async init() {
+    this._loadingState.set('loading');
     try {
       await this.ensureConfigExists();
       await this.fetchPublicData();
-      this.subscribeToRealtime();
+      if (isPlatformBrowser(this.platformId)) {
+        this.subscribeToRealtime();
+      }
+      this._loadingState.set('loaded');
     } catch (e) {
       console.error('Initialization failed', e);
+      this._loadingState.set('error');
     }
   }
 
   async ensureConfigExists() {
     const { data, error } = await this.supabase.from('config').select('*').limit(1).maybeSingle();
-    if (!data && !error) {
+    if (error) {
+      // If there's an error (e.g. table doesn't exist), throw it to be caught by init()
+      throw error;
+    }
+    if (!data) {
       await this.supabase.from('config').insert({ 
         deadline: '2023-12-20', 
         budget: 500, 
         draw_complete: false, 
-        gallery_images: [] 
       });
     }
   }
@@ -98,19 +109,22 @@ export class SantaService {
 
   // 1. Fetch only non-sensitive data for the public list
   async fetchPublicData() {
-    const { data: configData } = await this.supabase.from('config').select('*').limit(1).maybeSingle();
+    const { data: configData, error: configError } = await this.supabase.from('config').select('*').limit(1).maybeSingle();
+    if (configError) throw configError;
     if (configData) this._config.set(configData);
 
     const { data: parts, error } = await this.supabase
       .from('participants')
-      .select('id, name, gender, revealed'); // ONLY public fields. No PINs, no assignments.
+      .select('id, name, revealed'); // ONLY public fields. No PINs, no assignments.
     
-    if (error) console.error('Error fetching public participants:', error);
+    if (error) {
+        console.error('Error fetching public participants:', error);
+        throw error;
+    }
     if (parts) {
       // Map to Participant interface
       this._participants.set(parts.map(p => ({
         ...p,
-        gender: p.gender || 'Other', // Fallback
         revealed: p.revealed || false
       })) as Participant[]);
     }
@@ -181,7 +195,7 @@ export class SantaService {
     if (me.assigned_to_id) {
       const { data: target } = await this.supabase
         .from('participants')
-        .select('name, gender, food_preference, fun_fact')
+        .select('name, food_preference, fun_fact')
         .eq('id', me.assigned_to_id)
         .single();
       
@@ -192,7 +206,6 @@ export class SantaService {
         return {
           id: me.assigned_to_id,
           name: target.name,
-          gender: target.gender,
           foodPreference: target.food_preference,
           funFact: target.fun_fact,
           revealed: false,
@@ -205,25 +218,21 @@ export class SantaService {
 
   // --- DATA MANAGEMENT ---
 
-  async addParticipant(name: string, gender: string, pin: string, partnerId: string | number | null, foodPref: string, funFact: string): Promise<boolean> {
+  async addParticipant(name: string, pin: string, partnerId: string | number | null, foodPref: string, funFact: string): Promise<boolean> {
     const { error } = await this.supabase
       .from('participants')
       .insert({ 
         name, 
-        gender,
         pin,
         partner_id: partnerId,
         food_preference: foodPref,
-        fun_fact: funFact
+        fun_fact: funFact,
+        gender: 'Other' // Set a default as gender is removed from UI
       });
     
     if (error) {
       console.error('Error adding participant:', error);
-      if (error.code === 'PGRST204') {
-        alert('DATABASE ERROR: Missing Columns! Please run the SQL script provided to add "gender", "pin", "food_preference" columns.');
-      } else {
-        alert(`Error adding elf: ${error.message}`);
-      }
+      this.notificationService.show(`Error adding elf: ${error.message}`, 'error');
       return false;
     }
 
@@ -237,7 +246,10 @@ export class SantaService {
       .update({ partner_id: newPartnerId })
       .eq('id', participantId);
 
-    if (error) console.error(error);
+    if (error) {
+        console.error('Error updating partner:', error);
+        this.notificationService.show(`Failed to update partner constraint: ${error.message}`, 'error');
+    }
     else if (this._isAdmin()) this.fetchAdminData();
   }
 
@@ -258,7 +270,7 @@ export class SantaService {
       
       return true;
     } catch (e: any) {
-      alert(`Could not remove participant: ${e.message || e}`);
+      this.notificationService.show(`Could not remove participant: ${e.message || e}`, 'error');
       return false;
     }
   }
@@ -307,40 +319,39 @@ export class SantaService {
     }
 
     if (success) {
-      // Batch update logic
-      for (const p of this._adminParticipants()) {
-        const targetId = assignments.get(p.id);
-        if (targetId) {
-          await this.supabase.from('participants').update({ assigned_to_id: targetId }).eq('id', p.id);
+      try {
+        for (const [giverId, receiverId] of assignments.entries()) {
+          const { error } = await this.supabase.from('participants').update({ assigned_to_id: receiverId }).eq('id', giverId);
+          if (error) throw error;
         }
+        
+        const configId = this._config().id || 1;
+        const { error: configError } = await this.supabase.from('config').update({ draw_complete: true }).eq('id', configId);
+        if (configError) throw configError;
+
+        await this.fetchAdminData(); // Refresh data
+        return true;
+      } catch (e: any) {
+        console.error('Error saving matches to database:', e);
+        this.notificationService.show(`Failed to save matches: ${e.message}. The draw is being rolled back.`, 'error');
+        await this.resetDraw();
+        return false;
       }
-      
-      const configId = this._config().id || 1;
-      await this.supabase.from('config').update({ draw_complete: true }).eq('id', configId);
-      return true;
     }
     return false;
   }
 
   async resetDraw() {
-    const configId = this._config().id || 1;
-    await this.supabase.from('participants').update({ assigned_to_id: null, revealed: false }).neq('id', '0'); 
-    await this.supabase.from('config').update({ draw_complete: false }).eq('id', configId);
-  }
-
-  // --- IMAGES ---
-  
-  async addImage(source: string) {
-    const id = this._config().id || 1;
-    const currentImages = this._config().gallery_images || [];
-    await this.supabase.from('config').update({ gallery_images: [...currentImages, source] }).eq('id', id);
-  }
-
-  async removeImage(index: number) {
-    const id = this._config().id || 1;
-    const currentImages = [...(this._config().gallery_images || [])];
-    currentImages.splice(index, 1);
-    await this.supabase.from('config').update({ gallery_images: currentImages }).eq('id', id);
+    try {
+      const configId = this._config().id || 1;
+      const { error: participantsError } = await this.supabase.from('participants').update({ assigned_to_id: null, revealed: false }).neq('id', '0');
+      if (participantsError) throw participantsError;
+      const { error: configError } = await this.supabase.from('config').update({ draw_complete: false }).eq('id', configId);
+      if (configError) throw configError;
+    } catch (e: any) {
+      console.error('Error resetting draw:', e);
+      this.notificationService.show(`Failed to reset draw: ${e.message}`, 'error');
+    }
   }
 
   exportData(): string {

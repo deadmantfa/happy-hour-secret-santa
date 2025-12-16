@@ -17,6 +17,7 @@
     "@angular/platform-browser": "^21.0.0",
     "@angular/common": "^21.0.0",
     "@supabase/supabase-js": "2.39.3",
+    "@angular/platform-server": "^21.0.5",
     "@angular/build": "^21.0.0",
     "@angular/cli": "^21.0.0",
     "@angular/compiler-cli": "^21.0.0",

@@ -1,8 +1,8 @@
-
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SantaService } from '../services/santa.service';
+import { NotificationService } from '../services/notification.service';
 
 @Component({
   selector: 'app-admin',
@@ -13,6 +13,7 @@ import { SantaService } from '../services/santa.service';
       <!-- Login screen -->
       <div class="max-w-md mx-auto p-8 frosty-glass rounded-3xl text-center mt-10 shadow-2xl relative z-10">
         <div class="absolute -top-6 -right-6 text-6xl animate-bounce">🎅</div>
+        <div class="absolute -bottom-8 -left-8 text-5xl animate-float" style="animation-duration: 4s;">🧝</div>
         <h2 class="text-3xl font-christmas text-gold mb-2">Santa's Workshop</h2>
         <p class="text-white/80 mb-6 text-sm">Restricted Area. Elves only.</p>
         
@@ -38,7 +39,7 @@ import { SantaService } from '../services/santa.service';
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-white/10 pb-6">
           <div>
             <h2 class="text-4xl font-christmas text-gold drop-shadow-md">Admin Workshop 🔨</h2>
-            <p class="text-white/60 text-sm mt-1">Manage your elves, images, and magic.</p>
+            <p class="text-white/60 text-sm mt-1">Manage your elves and the secret draw.</p>
           </div>
           <div class="flex gap-2">
             <button (click)="backupData()" class="bg-blue-600/80 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold backdrop-blur-md transition-all border border-blue-400/30 flex items-center gap-2">
@@ -53,7 +54,7 @@ import { SantaService } from '../services/santa.service';
         <div class="grid lg:grid-cols-12 gap-8">
           
           <!-- LEFT COLUMN: Participants -->
-          <div class="lg:col-span-7 space-y-6">
+          <div class="lg:col-span-7">
             <div class="bg-black/20 p-5 rounded-2xl border border-white/10 backdrop-blur-sm">
               <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold text-white flex items-center gap-2">
@@ -85,7 +86,7 @@ import { SantaService } from '../services/santa.service';
                       
                       <!-- Info -->
                       <div class="flex items-center gap-3">
-                        <div class="text-3xl bg-white/5 p-2 rounded-full shadow-inner">{{ p.gender === 'Male' ? '🎅' : (p.gender === 'Female' ? '🤶' : '🧝') }}</div>
+                        <div class="text-3xl bg-white/5 p-2 rounded-full shadow-inner">🧝</div>
                         <div>
                           <div class="font-bold text-lg text-green-200 leading-tight">{{ p.name }}</div>
                           <div class="flex flex-wrap gap-2 text-xs text-gray-300 mt-1">
@@ -143,76 +144,57 @@ import { SantaService } from '../services/santa.service';
           </div>
 
           <!-- RIGHT COLUMN: Settings & Actions -->
-          <div class="lg:col-span-5 space-y-6">
-            
-            <!-- Magic Button -->
-            <div class="bg-gradient-to-br from-black/40 to-black/20 p-6 rounded-2xl border border-gold/30 shadow-lg relative overflow-hidden">
-              <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl pointer-events-none">🎲</div>
-              <h3 class="text-xl font-bold text-gold mb-4">The Draw</h3>
-              
-              @if (service.config().drawComplete) {
-                <div class="bg-green-900/40 border border-green-500/50 p-4 rounded-xl text-center mb-4">
-                  <div class="text-green-300 font-bold text-xl flex items-center justify-center gap-2 mb-1">
-                    <span>✅</span> Draw Completed!
+          <div class="lg:col-span-5">
+            <div class="lg:sticky lg:top-8 space-y-6">
+              <!-- Magic Button -->
+              <div class="bg-gradient-to-br from-black/40 to-black/20 p-6 rounded-2xl border border-gold/30 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl pointer-events-none">🎲</div>
+                <h3 class="text-xl font-bold text-gold mb-4">The Draw</h3>
+                
+                @if (service.config().drawComplete) {
+                  <div class="bg-green-900/40 border border-green-500/50 p-4 rounded-xl text-center mb-4">
+                    <div class="text-green-300 font-bold text-xl flex items-center justify-center gap-2 mb-1">
+                      <span>✅</span> Draw Completed!
+                    </div>
+                    <p class="text-xs text-green-100/70">Matches are secure. Users can reveal now.</p>
                   </div>
-                  <p class="text-xs text-green-100/70">Matches are secure. Users can reveal now.</p>
-                </div>
-                <button (click)="service.resetDraw()" class="w-full py-2 text-xs text-red-400 hover:text-red-200 hover:bg-red-900/20 rounded transition-colors border border-transparent hover:border-red-900/50">
-                  ⚠️ Reset Pairing (Danger)
-                </button>
-              } @else {
-                <button 
-                  (click)="draw()"
-                  [disabled]="isDrawing || service.adminParticipants().length < 2"
-                  class="w-full bg-gold hover:bg-yellow-400 text-red-900 font-bold py-4 rounded-xl shadow-lg border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 disabled:opacity-50 disabled:grayscale text-lg transition-all flex justify-center items-center gap-2">
-                  @if (isDrawing) {
-                    <span class="animate-spin">❄️</span> Calculating...
-                  } @else {
-                    <span>🎲</span> GENERATE PAIRINGS
-                  }
-                </button>
-                <div class="mt-4 text-xs text-gray-400 bg-black/20 p-3 rounded-lg border border-white/5">
-                  <p class="mb-1 font-bold text-gray-300">Smart Constraints Active:</p>
-                  <ul class="list-disc list-inside space-y-1 opacity-80">
-                    <li>Self-gifting prevented</li>
-                    <li>Partner restrictions respected</li>
-                    <li>Reciprocal gifting (A↔B) avoided</li>
-                  </ul>
-                </div>
-              }
-            </div>
-
-            <!-- Gallery Manager -->
-            <div class="bg-black/20 p-5 rounded-2xl border border-white/10">
-              <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><span>📸</span> Gallery</h3>
-              
-              <div class="flex gap-2 mb-4">
-                <input type="text" [(ngModel)]="imageUrl" placeholder="Image URL..." class="flex-grow p-2 rounded-lg bg-black/40 border border-white/10 text-white text-sm focus:border-gold outline-none">
-                <button (click)="addImageUrl()" class="bg-green-600 hover:bg-green-500 text-white px-4 rounded-lg font-bold text-sm transition-colors">+</button>
-              </div>
-
-              <div class="grid grid-cols-4 gap-2">
-                @for (img of service.config().galleryImages; track $index) {
-                  <div class="relative group aspect-square">
-                    <img [src]="img" class="w-full h-full object-cover rounded-lg border border-white/10">
-                    <button (click)="service.removeImage($index)" class="absolute inset-0 bg-red-900/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity font-bold">×</button>
+                  <button (click)="service.resetDraw()" class="w-full py-2 text-xs text-red-400 hover:text-red-200 hover:bg-red-900/20 rounded transition-colors border border-transparent hover:border-red-900/50">
+                    ⚠️ Reset Pairing (Danger)
+                  </button>
+                } @else {
+                  <button 
+                    (click)="draw()"
+                    [disabled]="isDrawing || service.adminParticipants().length < 2"
+                    class="w-full bg-gold hover:bg-yellow-400 text-red-900 font-bold py-4 rounded-xl shadow-lg border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 disabled:opacity-50 disabled:grayscale text-lg transition-all flex justify-center items-center gap-2">
+                    @if (isDrawing) {
+                      <span class="animate-spin">❄️</span> Calculating...
+                    } @else {
+                      <span>🎲</span> GENERATE PAIRINGS
+                    }
+                  </button>
+                  <div class="mt-4 text-xs text-gray-400 bg-black/20 p-3 rounded-lg border border-white/5">
+                    <p class="mb-1 font-bold text-gray-300">Smart Constraints Active:</p>
+                    <ul class="list-disc list-inside space-y-1 opacity-80">
+                      <li>Self-gifting prevented</li>
+                      <li>Partner restrictions respected</li>
+                      <li>Reciprocal gifting (A↔B) avoided</li>
+                    </ul>
                   </div>
                 }
               </div>
-            </div>
 
-            <!-- Stats -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="bg-black/20 p-4 rounded-xl text-center border border-white/5">
-                <div class="text-2xl font-bold text-yellow-300">₹{{ service.config().budget }}</div>
-                <div class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Min Budget</div>
-              </div>
-              <div class="bg-black/20 p-4 rounded-xl text-center border border-white/5">
-                <div class="text-lg font-bold text-red-300 truncate">{{ service.config().deadline }}</div>
-                <div class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Deadline</div>
+              <!-- Stats -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-black/20 p-4 rounded-xl text-center border border-white/5">
+                  <div class="text-2xl font-bold text-yellow-300">₹{{ service.config().budget }}</div>
+                  <div class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Min Budget</div>
+                </div>
+                <div class="bg-black/20 p-4 rounded-xl text-center border border-white/5">
+                  <div class="text-lg font-bold text-red-300 truncate">{{ service.config().deadline }}</div>
+                  <div class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Deadline</div>
+                </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -229,33 +211,29 @@ import { SantaService } from '../services/santa.service';
 })
 export class AdminComponent {
   service = inject(SantaService);
-  imageUrl = '';
+  notificationService = inject(NotificationService);
   isDrawing = false;
   isRemoving = signal<string | null>(null);
   confirmingDeleteId = signal<string | number | null>(null);
   passwordAttempt = '';
   
-  // New Signal for Hover state
   hoveredParticipantId = signal<string | number | null>(null);
 
   async login() {
     if (await this.service.checkAdminPassword(this.passwordAttempt)) {
       this.passwordAttempt = '';
     } else {
-      alert('🚫 Naughty list! Incorrect password.');
+      this.notificationService.show('🚫 Naughty list! Incorrect password.', 'error');
     }
   }
 
-  // Helper to check if a participant should be highlighted
   isPartnerOfHovered(id: string | number): boolean {
     const hoveredId = this.hoveredParticipantId();
     if (!hoveredId) return false;
     
-    // Find the participant currently being hovered
     const participants = this.service.adminParticipants();
     const hoveredParticipant = participants.find(p => p.id === hoveredId);
     
-    // Check if the current row (id) is the partner of the hovered person
     return hoveredParticipant?.partnerId === id;
   }
 
@@ -269,8 +247,8 @@ export class AdminComponent {
       
       try {
         const success = await this.service.removeParticipant(id);
-        if (!success) {
-          alert('Failed to remove. Please check the console.');
+        if (success) {
+          this.notificationService.show('Participant removed.', 'success');
         }
       } catch (e) {
         console.error('[DEBUG] Delete error:', e);
@@ -302,16 +280,9 @@ export class AdminComponent {
     this.isDrawing = false;
     
     if (success) {
-      alert('Draw Successful! Matches are hidden safely in the cloud.');
+      this.notificationService.show('Draw Successful! Matches are hidden safely in the cloud.', 'success');
     } else {
-      alert('Could not generate valid matches. Check constraints (too many couples?).');
-    }
-  }
-
-  addImageUrl() {
-    if (this.imageUrl) {
-      this.service.addImage(this.imageUrl);
-      this.imageUrl = '';
+      this.notificationService.show('Could not generate valid matches. Check constraints (too many couples?).', 'error');
     }
   }
 
