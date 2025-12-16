@@ -40,7 +40,8 @@ import { CommonModule } from '@angular/common';
                 <label class="block text-sm font-bold mb-1 text-green-200">Your Name</label>
                 <input 
                   type="text" 
-                  [(ngModel)]="name" 
+                  [ngModel]="name()" 
+                  (ngModelChange)="name.set($event)"
                   placeholder="e.g. Buddy the Elf"
                   class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body"
                 />
@@ -50,7 +51,8 @@ import { CommonModule } from '@angular/common';
               <div class="bg-black/20 p-3 rounded-xl">
                 <label class="block text-sm font-bold mb-1 text-green-200">Gender</label>
                 <select 
-                  [(ngModel)]="gender" 
+                  [ngModel]="gender()"
+                  (ngModelChange)="gender.set($event)"
                   class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body">
                   <option value="Male">Gentleman Elf 🎅</option>
                   <option value="Female">Lady Elf 🤶</option>
@@ -64,7 +66,8 @@ import { CommonModule } from '@angular/common';
               <div class="bg-black/20 p-3 rounded-xl">
                 <label class="block text-sm font-bold mb-1 text-green-200">Dietary Style 🍗🥗</label>
                 <select 
-                  [(ngModel)]="foodPref" 
+                  [ngModel]="foodPref()"
+                  (ngModelChange)="foodPref.set($event)"
                   class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body">
                   <option value="Non-Veg">Non-Veg (I eat everything)</option>
                   <option value="Veg">Veg (No meat please)</option>
@@ -79,7 +82,8 @@ import { CommonModule } from '@angular/common';
                 <p class="text-xs text-gray-300 mb-1">Remember this! You need it to see your match.</p>
                 <input 
                   type="text" 
-                  [(ngModel)]="pin" 
+                  [ngModel]="pin()"
+                  (ngModelChange)="pin.set($event)"
                   maxlength="4"
                   placeholder="e.g. 1234"
                   class="w-full p-3 rounded-lg bg-white/90 text-gray-900 font-bold tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-red-500 font-body"
@@ -93,7 +97,8 @@ import { CommonModule } from '@angular/common';
               <p class="text-xs text-gray-300 mb-1">Help your Santa out! Or tell us your favorite drink.</p>
               <input 
                 type="text" 
-                [(ngModel)]="funFact" 
+                [ngModel]="funFact()"
+                (ngModelChange)="funFact.set($event)"
                 placeholder="e.g. I love dark chocolate / I drink Gin"
                 class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body"
               />
@@ -104,7 +109,8 @@ import { CommonModule } from '@angular/common';
               <label class="block text-sm font-bold mb-1 text-green-200">Are you a couple? (Optional)</label>
               <p class="text-xs text-gray-300 mb-2">Select your partner so you don't gift them! ❤️</p>
               <select 
-                [(ngModel)]="partnerId" 
+                [ngModel]="partnerId()"
+                (ngModelChange)="partnerId.set($event)"
                 class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body">
                 <option [ngValue]="null">-- No Partner / Partner not listed yet --</option>
                 @for (p of service.participants(); track p.id) {
@@ -121,7 +127,7 @@ import { CommonModule } from '@angular/common';
                 <p class="text-xs text-gray-300">Kids will only be matched with other kids.</p>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" [(ngModel)]="isChild" class="sr-only peer">
+                <input type="checkbox" [ngModel]="isChild()" (ngModelChange)="isChild.set($event)" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-gold rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
               </label>
             </div>

@@ -8,7 +8,7 @@ serve(async (req) => {
   }
 
   try {
-    const { name, pin, partnerId, foodPref, funFact, isChild } = await req.json();
+    const { name, pin, gender, partnerId, foodPref, funFact, isChild } = await req.json();
 
     if (!name || !pin) {
       throw new Error("Name and PIN are required.");
@@ -17,6 +17,7 @@ serve(async (req) => {
     const { error } = await supabaseAdmin.from('participants').insert({
       name,
       pin,
+      gender,
       partner_id: partnerId,
       food_preference: foodPref,
       fun_fact: funFact,
