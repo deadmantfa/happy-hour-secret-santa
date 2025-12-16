@@ -1,11 +1,13 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { SantaService, Participant } from '../services/santa.service';
 import { GoogleGenAI } from '@google/genai';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-reveal',
   standalone: true,
-  imports: [],
+  imports: [FormsModule, CommonModule],
   template: `
     <div class="w-full flex flex-col items-center justify-center p-4 min-h-[80vh]">
       
@@ -65,7 +67,9 @@ import { GoogleGenAI } from '@google/genai';
                 UNLOCK 🔓
               }
             </button>
-            <p *ngIf="pinError" class="text-red-400 mt-4 font-bold text-sm animate-shake">Incorrect PIN! Try again.</p>
+            @if (pinError()) {
+              <p class="text-red-400 mt-4 font-bold text-sm animate-shake">Incorrect PIN! Try again.</p>
+            }
           </div>
         } @else {
           <!-- Big Reveal Card -->

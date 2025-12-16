@@ -1,11 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { SantaService } from '../services/santa.service';
 import { NotificationService } from '../services/notification.service';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-signup',
   standalone: true,
-  imports: [],
+  imports: [FormsModule, CommonModule],
   template: `
     <div class="relative w-full mx-auto">
       
