@@ -213,7 +213,11 @@ export class SantaService {
         return true;
       } catch (error: any) {
         console.error('Error adding participant via function:', error);
-        this.notificationService.show(`Error adding elf: ${error.message}`, 'error');
+        let userMessage = error.message;
+        if (error.name === 'FunctionsFetchError' || (error instanceof Error && error.message.toLowerCase().includes('failed to fetch'))) {
+            userMessage = 'Could not reach the North Pole. Please check server function (CORS) settings.';
+        }
+        this.notificationService.show(`Error adding elf: ${userMessage}`, 'error');
         return false;
       }
   }

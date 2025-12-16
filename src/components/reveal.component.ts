@@ -1,13 +1,11 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { SantaService, Participant } from '../services/santa.service';
 import { GoogleGenAI } from '@google/genai';
 
 @Component({
   selector: 'app-reveal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [],
   template: `
     <div class="w-full flex flex-col items-center justify-center p-4 min-h-[80vh]">
       

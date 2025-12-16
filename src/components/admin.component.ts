@@ -1,13 +1,11 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { SantaService } from '../services/santa.service';
 import { NotificationService } from '../services/notification.service';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [],
   template: `
     @if (!service.isAdmin()) {
       <!-- Login screen -->
