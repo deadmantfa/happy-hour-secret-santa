@@ -5,7 +5,7 @@ import { NotificationService } from './notification.service';
 
 // --- CONFIGURATION ---
 const SUPABASE_URL = 'https://awhftldondqmopnxbjie.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_WLeZyOD9vxomb8tYYAsIxw_iFMVCPSt'; 
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3aGZ0bGRvbmRxbW9wbnhiamllIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTkzNjA0MDQsImV4cCI6MjAxNDkzNjQwNH0.dJqL4DBvfJ-22e3s3CRgtu-1eea4y-Q5r_i2z192H3E'; 
 
 export interface Participant {
   id: string | number; 
@@ -78,7 +78,6 @@ export class SantaService {
   async init() {
     this._loadingState.set('loading');
     try {
-      await this.ensureConfigExists();
       await this.fetchPublicData();
       if (isPlatformBrowser(this.platformId)) {
         this.subscribeToRealtime();
@@ -90,28 +89,22 @@ export class SantaService {
     }
   }
 
-  async ensureConfigExists() {
-    const { data, error } = await this.supabase.from('config').select('*').limit(1).maybeSingle();
-    if (error) {
-      // If there's an error (e.g. table doesn't exist), throw it to be caught by init()
-      throw error;
-    }
-    if (!data) {
-      await this.supabase.from('config').insert({ 
-        deadline: '2023-12-20', 
-        budget: 500, 
-        draw_complete: false, 
-      });
-    }
-  }
-
   // --- SECURE DATA FETCHING ---
 
   // 1. Fetch only non-sensitive data for the public list
   async fetchPublicData() {
     const { data: configData, error: configError } = await this.supabase.from('config').select('*').limit(1).maybeSingle();
     if (configError) throw configError;
-    if (configData) this._config.set(configData);
+    if (configData) {
+      this._config.set(configData);
+    } else {
+        // If config is null (e.g., table empty), ensure a default exists by calling an edge function.
+        await this.supabase.functions.invoke('ensure-config');
+        // Re-fetch after ensuring it exists.
+        const { data: newConfigData } = await this.supabase.from('config').select('*').limit(1).single();
+        if (newConfigData) this._config.set(newConfigData);
+    }
+
 
     const { data: parts, error } = await this.supabase
       .from('participants')
@@ -122,7 +115,6 @@ export class SantaService {
         throw error;
     }
     if (parts) {
-      // Map to Participant interface
       this._participants.set(parts.map(p => ({
         ...p,
         revealed: p.revealed || false
@@ -163,12 +155,24 @@ export class SantaService {
   // --- AUTH ---
 
   async checkAdminPassword(password: string): Promise<boolean> {
-    if (password === 'hohoho' || password === 'admin123') {
-      this._isAdmin.set(true);
-      await this.fetchAdminData(); // Load secrets now
-      return true;
+    try {
+      const { data, error } = await this.supabase.functions.invoke('verify-admin', {
+        body: { password },
+      });
+
+      if (error) throw error;
+
+      if (data?.isAdmin) {
+        this._isAdmin.set(true);
+        await this.fetchAdminData();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Admin login failed:', e);
+      this.notificationService.show('Error during admin login.', 'error');
+      return false;
     }
-    return false;
   }
 
   logoutAdmin() {
@@ -176,93 +180,64 @@ export class SantaService {
     this._adminParticipants.set([]); // Clear secrets from memory
   }
 
-  // Securely verify PIN on the server query side (simulated via strict query)
   async verifyUserAndGetTarget(userId: string | number, pin: string): Promise<Participant | null> {
-    // 1. Try to find the user with matching ID AND PIN
-    const { data: me, error } = await this.supabase
-      .from('participants')
-      .select('id, assigned_to_id')
-      .eq('id', userId)
-      .eq('pin', pin)
-      .maybeSingle();
+    try {
+      const { data, error } = await this.supabase.functions.invoke('verify-pin-and-get-target', {
+        body: { userId, pin }
+      });
+      
+      if (error) throw error;
 
-    if (error || !me) {
-      console.error('Verification failed:', error);
+      if (data.target) {
+        return data.target as Participant;
+      }
+      return null;
+    } catch (error: any) {
+      console.error('Verification via function failed:', error);
       return null;
     }
-
-    // 2. User verified. If they have a target, fetch the target's details.
-    if (me.assigned_to_id) {
-      const { data: target } = await this.supabase
-        .from('participants')
-        .select('name, food_preference, fun_fact')
-        .eq('id', me.assigned_to_id)
-        .single();
-      
-      if (target) {
-        // Mark as revealed
-        await this.supabase.from('participants').update({ revealed: true }).eq('id', userId);
-        
-        return {
-          id: me.assigned_to_id,
-          name: target.name,
-          foodPreference: target.food_preference,
-          funFact: target.fun_fact,
-          revealed: false,
-          pin: '' // Don't need target pin
-        } as Participant;
-      }
-    }
-    return null;
   }
 
   // --- DATA MANAGEMENT ---
 
   async addParticipant(name: string, pin: string, partnerId: string | number | null, foodPref: string, funFact: string): Promise<boolean> {
-    const { error } = await this.supabase
-      .from('participants')
-      .insert({ 
-        name, 
-        pin,
-        partner_id: partnerId,
-        food_preference: foodPref,
-        fun_fact: funFact,
-        gender: 'Other' // Set a default as gender is removed from UI
-      });
-    
-    if (error) {
-      console.error('Error adding participant:', error);
-      this.notificationService.show(`Error adding elf: ${error.message}`, 'error');
-      return false;
-    }
+     try {
+        const { error } = await this.supabase.functions.invoke('add-participant', {
+          body: { name, pin, partnerId, foodPref, funFact }
+        });
+        
+        if (error) throw error;
 
-    await this.fetchPublicData(); 
-    return true;
+        // Realtime will update lists, but we can fetch to be sure
+        await this.fetchPublicData();
+        return true;
+      } catch (error: any) {
+        console.error('Error adding participant via function:', error);
+        this.notificationService.show(`Error adding elf: ${error.message}`, 'error');
+        return false;
+      }
   }
 
   async updatePartner(participantId: string | number, newPartnerId: string | number | null) {
-    const { error } = await this.supabase
-      .from('participants')
-      .update({ partner_id: newPartnerId })
-      .eq('id', participantId);
-
-    if (error) {
-        console.error('Error updating partner:', error);
-        this.notificationService.show(`Failed to update partner constraint: ${error.message}`, 'error');
+    try {
+      const { error } = await this.supabase.functions.invoke('update-partner', {
+        body: { participantId, newPartnerId }
+      });
+      if (error) throw error;
+      if (this._isAdmin()) this.fetchAdminData();
+    } catch (error: any) {
+      console.error('Error updating partner:', error);
+      this.notificationService.show(`Failed to update partner constraint: ${error.message}`, 'error');
     }
-    else if (this._isAdmin()) this.fetchAdminData();
   }
 
   async removeParticipant(id: string | number): Promise<boolean> {
     try {
-      await Promise.all([
-        this.supabase.from('participants').update({ partner_id: null }).eq('partner_id', id),
-        this.supabase.from('participants').update({ assigned_to_id: null }).eq('assigned_to_id', id)
-      ]);
-
-      const { error } = await this.supabase.from('participants').delete().eq('id', id);
+      const { error } = await this.supabase.functions.invoke('remove-participant', {
+        body: { id }
+      });
       if (error) throw error;
-      
+
       if (this._isAdmin()) {
         await this.fetchAdminData();
       }
@@ -278,83 +253,49 @@ export class SantaService {
   // --- DRAW LOGIC ---
 
   async generateMatches(): Promise<boolean> {
-    // Must use Admin data for logic because public data lacks partner_id constraints
-    if (!this._isAdmin()) await this.fetchAdminData();
-    const p = [...this._adminParticipants()];
-    
-    if (p.length < 2) return false;
-
-    let attempts = 0;
-    const maxAttempts = 5000;
-    let success = false;
-    let assignments = new Map<string | number, string | number>(); 
-    
-    while (attempts < maxAttempts && !success) {
-      const receivers = p.map(x => x.id);
+    if (!this.isAdmin()) {
+      this.notificationService.show('You must be an admin to perform this action.', 'error');
+      return false;
+    }
+    try {
+      const { error } = await this.supabase.functions.invoke('generate-matches');
+      if (error) throw error;
       
-      // Shuffle
-      for (let i = receivers.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [receivers[i], receivers[j]] = [receivers[j], receivers[i]];
-      }
-
-      let valid = true;
-      assignments.clear();
-
-      for (let i = 0; i < p.length; i++) {
-        const giver = p[i];
-        const receiverId = receivers[i]; 
-        
-        if (String(giver.id) === String(receiverId)) { valid = false; break; }
-        if (giver.partner_id && String(giver.partner_id) === String(receiverId)) { valid = false; break; }
-        
-        const receiverHasGiver = assignments.get(receiverId) === giver.id;
-        if (receiverHasGiver && p.length > 2) { valid = false; break; }
-        
-        assignments.set(giver.id, receiverId);
-      }
-
-      if (valid) success = true;
-      attempts++;
+      await this.fetchAdminData();
+      await this.fetchPublicData();
+      return true;
+    } catch (e: any) {
+      console.error('Error generating matches via function:', e);
+      this.notificationService.show(`Failed to generate matches: ${e.message || 'Server error'}.`, 'error');
+      return false;
     }
-
-    if (success) {
-      try {
-        for (const [giverId, receiverId] of assignments.entries()) {
-          const { error } = await this.supabase.from('participants').update({ assigned_to_id: receiverId }).eq('id', giverId);
-          if (error) throw error;
-        }
-        
-        const configId = this._config().id || 1;
-        const { error: configError } = await this.supabase.from('config').update({ draw_complete: true }).eq('id', configId);
-        if (configError) throw configError;
-
-        await this.fetchAdminData(); // Refresh data
-        return true;
-      } catch (e: any) {
-        console.error('Error saving matches to database:', e);
-        this.notificationService.show(`Failed to save matches: ${e.message}. The draw is being rolled back.`, 'error');
-        await this.resetDraw();
-        return false;
-      }
-    }
-    return false;
   }
 
   async resetDraw() {
+    if (!this.isAdmin()) {
+      this.notificationService.show('You must be an admin to perform this action.', 'error');
+      return;
+    }
     try {
-      const configId = this._config().id || 1;
-      const { error: participantsError } = await this.supabase.from('participants').update({ assigned_to_id: null, revealed: false }).neq('id', '0');
-      if (participantsError) throw participantsError;
-      const { error: configError } = await this.supabase.from('config').update({ draw_complete: false }).eq('id', configId);
-      if (configError) throw configError;
+      const { error } = await this.supabase.functions.invoke('reset-draw');
+      if (error) throw error;
+
+      await this.fetchAdminData();
+      await this.fetchPublicData();
     } catch (e: any) {
-      console.error('Error resetting draw:', e);
-      this.notificationService.show(`Failed to reset draw: ${e.message}`, 'error');
+      console.error('Error resetting draw via function:', e);
+      this.notificationService.show(`Failed to reset draw: ${e.message || 'Server error'}.`, 'error');
     }
   }
 
   exportData(): string {
     return JSON.stringify({ participants: this._adminParticipants(), config: this._config() });
+  }
+  
+  // This method is no longer needed on the client, as the logic will be on the server.
+  // It's kept here for reference to show what the server-side function `ensure-config` would do.
+  private async ensureConfigExists() {
+    // This logic is now handled by the 'ensure-config' edge function
+    // and the initial `fetchPublicData` call.
   }
 }
