@@ -5,7 +5,7 @@ import { NotificationService } from './notification.service';
 
 // --- CONFIGURATION ---
 const SUPABASE_URL = 'https://awhftldondqmopnxbjie.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3aGZ0bGRvbmRxbW9wbnhiamllIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTkzNjA0MDQsImV4cCI6MjAxNDkzNjQwNH0.dJqL4DBvfJ-22e3s3CRgtu-1eea4y-Q5r_i2z192H3E'; 
+const SUPABASE_KEY = 'sb_publishable_WLeZyOD9vxomb8tYYAsIxw_iFMVCPSt'; 
 
 export interface Participant {
   id: string | number; 
