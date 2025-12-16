@@ -22,3 +22,6 @@ steps:
 
 images:
   - 'gcr.io/$PROJECT_ID/the-happy-hour-secret-santa:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
