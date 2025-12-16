@@ -5,7 +5,7 @@ import { NotificationService } from './notification.service';
 
 // --- CONFIGURATION ---
 const SUPABASE_URL = 'https://awhftldondqmopnxbjie.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_WLeZyOD9vxomb8tYYAsIxw_iFMVCPSt'; 
+const SUPABASE_KEY = 'sb_publishable_0HgDsnSagX4lBnRVUmwgZw_bd22p5RW'; 
 
 export interface Participant {
   id: string | number; 
