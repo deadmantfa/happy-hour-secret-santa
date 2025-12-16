@@ -46,6 +46,20 @@ import { CommonModule } from '@angular/common';
                 />
               </div>
 
+               <!-- Gender -->
+              <div class="bg-black/20 p-3 rounded-xl">
+                <label class="block text-sm font-bold mb-1 text-green-200">Gender</label>
+                <select 
+                  [(ngModel)]="gender" 
+                  class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <!-- Food Preference -->
               <div class="bg-black/20 p-3 rounded-xl">
                 <label class="block text-sm font-bold mb-1 text-green-200">Dietary Style 🍗🥗</label>
@@ -58,9 +72,7 @@ import { CommonModule } from '@angular/common';
                   <option value="Eggetarian">Eggetarian</option>
                 </select>
               </div>
-            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <!-- SECRET PIN -->
               <div class="bg-red-900/40 p-3 rounded-xl border border-red-500/30">
                 <label class="block text-sm font-bold mb-1 text-gold">Secret PIN 🔒</label>
@@ -146,6 +158,7 @@ export class SignupComponent {
   notificationService = inject(NotificationService);
   name = signal('');
   pin = signal('');
+  gender = signal<'Male' | 'Female' | 'Other'>('Male');
   foodPref = signal('Non-Veg');
   funFact = signal('');
   partnerId = signal<string | number | null>(null);
@@ -167,6 +180,7 @@ export class SignupComponent {
       const success = await this.service.addParticipant(
         this.name(), 
         this.pin(),
+        this.gender(),
         this.partnerId(), 
         this.foodPref(), 
         this.funFact()
