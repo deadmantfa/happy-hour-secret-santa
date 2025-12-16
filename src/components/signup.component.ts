@@ -114,6 +114,18 @@ import { CommonModule } from '@angular/common';
               </select>
             </div>
 
+            <!-- Child Status -->
+            <div class="bg-black/20 p-3 rounded-xl flex items-center justify-between">
+              <div>
+                <label class="block text-sm font-bold text-green-200">Is this a Child? 👶</label>
+                <p class="text-xs text-gray-300">Kids will only be matched with other kids.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" [(ngModel)]="isChild" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-gold rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+              </label>
+            </div>
+
             <div class="pt-2">
               <button 
                 (click)="join()"
@@ -162,6 +174,7 @@ export class SignupComponent {
   foodPref = signal('Non-Veg');
   funFact = signal('');
   partnerId = signal<string | number | null>(null);
+  isChild = signal(false);
   isJoining = signal(false);
 
   async join() {
@@ -183,7 +196,8 @@ export class SignupComponent {
         this.gender(),
         this.partnerId(), 
         this.foodPref(), 
-        this.funFact()
+        this.funFact(),
+        this.isChild()
       );
       
       if (success) {
@@ -192,6 +206,7 @@ export class SignupComponent {
         this.funFact.set('');
         this.pin.set('');
         this.partnerId.set(null);
+        this.isChild.set(false);
         this.notificationService.show("Ho Ho Ho! You're on the list!", 'success');
       }
     } catch (e: any) {

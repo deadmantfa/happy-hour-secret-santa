@@ -8,7 +8,7 @@ serve(async (req) => {
   }
 
   try {
-    const { name, pin, partnerId, foodPref, funFact } = await req.json();
+    const { name, pin, partnerId, foodPref, funFact, isChild } = await req.json();
 
     if (!name || !pin) {
       throw new Error("Name and PIN are required.");
@@ -20,6 +20,7 @@ serve(async (req) => {
       partner_id: partnerId,
       food_preference: foodPref,
       fun_fact: funFact,
+      is_child: isChild || false,
     });
 
     if (error) throw error;

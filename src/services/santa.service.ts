@@ -17,6 +17,7 @@ export interface Participant {
   assigned_to_id?: string | number | null;
   food_preference?: string;
   fun_fact?: string;
+  is_child?: boolean;
   
   revealed: boolean;
   
@@ -25,6 +26,7 @@ export interface Participant {
   assignedToId?: string | number | null;
   foodPreference?: string;
   funFact?: string;
+  isChild?: boolean;
 }
 
 // Represents the raw data structure from the 'config' table in Supabase.
@@ -169,10 +171,10 @@ export class SantaService {
 
   // --- DATA MANAGEMENT (via Edge Functions) ---
 
-  async addParticipant(name: string, pin: string, gender: 'Male' | 'Female' | 'Other', partnerId: string | number | null, foodPref: string, funFact: string): Promise<boolean> {
+  async addParticipant(name: string, pin: string, gender: 'Male' | 'Female' | 'Other', partnerId: string | number | null, foodPref: string, funFact: string, isChild: boolean): Promise<boolean> {
     try {
       const { error } = await this.supabase.functions.invoke('add-participant', {
-        body: { name, pin, gender, partnerId, foodPref, funFact }
+        body: { name, pin, gender, partnerId, foodPref, funFact, isChild }
       });
       if (error) throw error;
       return true;
