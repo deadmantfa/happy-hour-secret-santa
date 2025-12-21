@@ -21,7 +21,7 @@ import { CommonModule } from '@angular/common';
           type="password" 
           [(ngModel)]="passwordAttempt" 
           (keyup.enter)="login()" 
-          placeholder="Enter Password (hohoho)" 
+          placeholder="Enter Admin Password" 
           class="w-full p-3 rounded-lg bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold font-body mb-4 shadow-inner"
         >
         
